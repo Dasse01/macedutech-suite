@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>방학 학습 스케줄러 (주간 루틴) - Web</title>
+
+  <!-- Excel Export (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f1f5f9; --card:#ffffff; --primary:#1e40af; --secondary:#3b82f6;
+      --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+      --sel:#E8F0FF;
+    }
+    body{
+      font-family:'Pretendard', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      margin:0;
+      padding:18px;
+    }
+    .wrap{max-width:1200px;margin:0 auto;}
+    .card{
+      background:var(--card);
+      border:1px solid rgba(226,232,240,.7);
+      border-radius:18px;
+      box-shadow:0 10px 25px rgba(0,0,0,.05);
+      padding:16px;
+      margin-bottom:14px;
+    }
+    h1{margin:0 0 10px;color:var(--primary);font-weight:900;}
+    .row{display:grid;grid-template-columns: 180px 220px 120px 1fr 80px 1fr; gap:10px; align-items:end;}
+    @media (max-width: 980px){
+      .row{grid-template-columns: 1fr 1fr; align-items:stretch;}
+    }
+    label{display:block;font-weight:900;margin:0 0 6px;}
+    select,input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      font-size:14px;
+      outline:none;
+      background:#fff;
+    }
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center;}
+    button{
+      padding:12px 14px;border-radius:12px;border:none;cursor:pointer;
+      font-weight:900;background:var(--primary);color:#fff;
+    }
+    button:hover{filter:brightness(.96)}
+    .btn-ghost{background:transparent;color:var(--primary);border:1px solid rgba(30,64,175,.35);}
+    .btn-gray{background:#64748b;}
+    .tip{margin-left:auto;color:var(--muted);font-size:13px}
+    .hidden{display:none!important;}
+
+    /* Grid */
+    .gridWrap{overflow:auto;border-radius:16px;border:1px solid var(--border);}
+    table{border-collapse:collapse;width:100%;min-width:980px;background:#fff;}
+    thead th{
+      position:sticky;top:0;background:#EEF2FF;z-index:2;
+      text-align:center;font-weight:900;border-bottom:1px solid var(--border);
+      padding:10px 8px;
+    }
+    tbody th{
+      position:sticky;left:0;background:#EEF2FF;z-index:1;
+      text-align:center;font-weight:900;border-right:1px solid var(--border);
+      padding:10px 8px;
+      width:150px;
+      min-width:150px;
+    }
+    td{
+      border-left:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      vertical-align:top;
+      padding:8px 10px;
+      height:74px;
+      cursor:pointer;
+      white-space:pre-wrap;
+      font-size:13px;
+      line-height:1.3;
+    }
+    td:hover{background:#f8fafc;}
+    td.selected{background:var(--sel);}
+    .muted{color:var(--muted);}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>📅 방학 학습 스케줄러 (주간 루틴)</h1>
+
+    <div class="row">
+      <div>
+        <label>과목/활동</label>
+        <select id="subjectSelect"></select>
+      </div>
+
+      <div>
+        <label>내용(짧게)</label>
+        <input id="taskInput" placeholder="예: 수학 기출 30문항" />
+      </div>
+
+      <div>
+        <label>메모</label>
+        <input id="memoInput" placeholder="예: 2번 유형 오답" />
+      </div>
+
+      <div style="grid-column: span 3;">
+        <div class="btns" style="margin-top:0;">
+          <button type="button" onclick="applyToSelected()">선택 칸 적용</button>
+          <button type="button" class="btn-ghost" onclick="clearSelected()">선택 칸 비우기</button>
+
+          <button type="button" class="btn-gray" onclick="saveJSON()">저장(JSON)</button>
+          <button type="button" class="btn-gray" onclick="triggerLoadJSON()">불러오기(JSON)</button>
+          <button type="button" class="btn-gray" onclick="exportXLSX()">엑셀 내보내기(.xlsx)</button>
+          <button type="button" class="btn-ghost" onclick="resetAll()">전체 초기화</button>
+
+          <span class="tip">Tip: 표의 칸 클릭 → 위 입력 작성 → “선택 칸 적용”</span>
+        </div>
+      </div>
+    </div>
+
+    <input id="jsonFileInput" class="hidden" type="file" accept=".json,application/json" />
+  </div>
+
+  <div class="card">
+    <div class="gridWrap">
+      <table id="scheduleTable"></table>
+    </div>
+    <div class="muted" style="margin-top:10px;">
+      * 저장/불러오기는 로컬 파일로만 동작합니다(서버 없음). 엑셀은 브라우저에서 즉시 생성됩니다.
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================
+   1) 데이터/상수 (Tkinter와 동일)
+========================= */
+const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const TIME_SLOTS = [
+  "07:00~08:00",
+  "08:00~08:30",
+  "08:30~09:00",
+  "09:00~12:00",
+  "12:00~13:00",
+  "13:00~17:00",
+  "17:00~18:00",
+  "18:00~21:00",
+  "21:00~22:00",
+  "22:00~22:30",
+  "22:30~23:00",
+];
+const DEFAULT_SUBJECTS = ["국어", "수학", "영어", "사회", "과학", "루틴/점검", "휴식", "학원/과외", "자율학습", "기타"];
+
+// data: key "time|day" -> {subject, task, memo}
+let data = {};
+let selected = null; // {r, c} where r=1..TIME_SLOTS, c=1..DAYS
+
+/* =========================
+   2) DOM 참조
+========================= */
+const subjectSelect = document.getElementById("subjectSelect");
+const taskInput = document.getElementById("taskInput");
+const memoInput = document.getElementById("memoInput");
+const scheduleTable = document.getElementById("scheduleTable");
+const jsonFileInput = document.getElementById("jsonFileInput");
+
+/* =========================
+   3) 초기 렌더
+========================= */
+function init(){
+  // subjects
+  DEFAULT_SUBJECTS.forEach(s=>{
+    const opt = document.createElement("option");
+    opt.value = s; opt.textContent = s;
+    subjectSelect.appendChild(opt);
+  });
+
+  buildTable();
+
+  // file load handler
+  jsonFileInput.addEventListener("change", async (e)=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const txt = await file.text();
+    try{
+      const payload = JSON.parse(txt);
+      const loaded = payload.data || {};
+      data = loaded;
+      refreshAllCells();
+      alert("불러왔습니다.");
+    }catch(err){
+      console.error(err);
+      alert("JSON 파싱 오류: 파일 형식을 확인하세요.");
+    }finally{
+      jsonFileInput.value = "";
+    }
+  });
+}
+
+function buildTable(){
+  // table: thead + tbody
+  const thead = document.createElement("thead");
+  const trh = document.createElement("tr");
+  const th0 = document.createElement("th");
+  th0.textContent = "시간/요일";
+  trh.appendChild(th0);
+
+  DAYS.forEach(d=>{
+    const th = document.createElement("th");
+    th.textContent = d;
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+
+  const tbody = document.createElement("tbody");
+
+  TIME_SLOTS.forEach((tslot, i)=>{
+    const tr = document.createElement("tr");
+
+    const th = document.createElement("th");
+    th.textContent = tslot;
+    tr.appendChild(th);
+
+    DAYS.forEach((day, j)=>{
+      const td = document.createElement("td");
+      td.dataset.r = String(i+1);
+      td.dataset.c = String(j+1);
+      td.dataset.key = keyFromRC(i+1, j+1);
+      td.addEventListener("click", ()=>onCellClick(i+1, j+1));
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  scheduleTable.innerHTML = "";
+  scheduleTable.appendChild(thead);
+  scheduleTable.appendChild(tbody);
+
+  refreshAllCells();
+}
+
+/* =========================
+   4) Key/셀 렌더
+========================= */
+function keyFromRC(r, c){
+  const tslot = TIME_SLOTS[r-1];
+  const day = DAYS[c-1];
+  return `${tslot}|${day}`;
+}
+
+function onCellClick(r, c){
+  // unselect previous
+  if(selected){
+    const prev = findCell(selected.r, selected.c);
+    if(prev) prev.classList.remove("selected");
+  }
+  selected = {r, c};
+  const cell = findCell(r, c);
+  if(cell) cell.classList.add("selected");
+
+  const key = keyFromRC(r, c);
+  const item = data[key];
+
+  if(item){
+    subjectSelect.value = item.subject || DEFAULT_SUBJECTS[0];
+    taskInput.value = item.task || "";
+    memoInput.value = item.memo || "";
+  }else{
+    // subject는 유지(원본 Tkinter는 유지/초기화가 애매하지만, 여기선 유지가 편함)
+    taskInput.value = "";
+    memoInput.value = "";
+  }
+}
+
+function findCell(r, c){
+  return scheduleTable.querySelector(`td[data-r="${r}"][data-c="${c}"]`);
+}
+
+function renderCell(r, c){
+  const cell = findCell(r, c);
+  if(!cell) return;
+
+  const key = keyFromRC(r, c);
+  const item = data[key];
+
+  if(!item){
+    cell.textContent = "";
+    return;
+  }
+
+  let txt = `[${item.subject || ""}]\n${item.task || ""}`;
+  if(item.memo){
+    txt += `\n- ${item.memo}`;
+  }
+  cell.textContent = txt;
+}
+
+function refreshAllCells(){
+  for(let r=1;r<=TIME_SLOTS.length;r++){
+    for(let c=1;c<=DAYS.length;c++){
+      renderCell(r,c);
+    }
+  }
+}
+
+/* =========================
+   5) 버튼 액션
+========================= */
+function applyToSelected(){
+  if(!selected){
+    alert("먼저 표의 칸을 클릭해서 선택하세요.");
+    return;
+  }
+  const {r,c} = selected;
+  const key = keyFromRC(r,c);
+
+  const subject = (subjectSelect.value || "").trim();
+  const task = (taskInput.value || "").trim();
+  const memo = (memoInput.value || "").trim();
+
+  data[key] = {subject, task, memo};
+  renderCell(r,c);
+}
+
+function clearSelected(){
+  if(!selected){
+    alert("먼저 표의 칸을 클릭해서 선택하세요.");
+    return;
+  }
+  const {r,c} = selected;
+  const key = keyFromRC(r,c);
+  if(data[key]) delete data[key];
+  renderCell(r,c);
+}
+
+function resetAll(){
+  if(confirm("전체 내용을 초기화할까요?")){
+    data = {};
+    refreshAllCells();
+  }
+}
+
+function saveJSON(){
+  const payload = {
+    meta: { saved_at: new Date().toISOString(), version: 1 },
+    time_slots: TIME_SLOTS,
+    days: DAYS,
+    data
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `scheduler_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function triggerLoadJSON(){
+  jsonFileInput.click();
+}
+
+/* =========================
+   6) Excel Export (.xlsx) (openpyxl 느낌 최대한)
+========================= */
+function exportXLSX(){
+  const wb = XLSX.utils.book_new();
+
+  // A1: 시간/요일, B1~H1: 요일
+  // A2~A( ... ): 시간슬롯
+  const aoa = [];
+
+  // header row
+  aoa.push(["시간/요일", ...DAYS]);
+
+  // body rows
+  TIME_SLOTS.forEach(tslot=>{
+    const row = [tslot];
+    DAYS.forEach(day=>{
+      const key = `${tslot}|${day}`;
+      const item = data[key];
+      let txt = "";
+      if(item){
+        txt = `[${item.subject || ""}]\n${item.task || ""}`;
+        if(item.memo) txt += `\n- ${item.memo}`;
+      }
+      row.push(txt);
+    });
+    aoa.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // column widths (A=16, B~H=22)
+  ws["!cols"] = [
+    {wch:16},
+    ...Array(DAYS.length).fill({wch:22})
+  ];
+
+  // row heights (header 24, others 60)
+  ws["!rows"] = [{hpt:24}, ...Array(TIME_SLOTS.length).fill({hpt:60})];
+
+  // basic styling (SheetJS community는 스타일 제한이 있음)
+  // 하지만 wrap 정도는 유효. (엑셀에서 자동 줄바꿈 보장)
+  // 셀에 \n 포함되어 있어 줄바꿈 표시됩니다.
+
+  XLSX.utils.book_append_sheet(wb, ws, "주간스케줄");
+
+  const filename = `주간스케줄_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+/* =========================
+   init
+========================= */
+init();
+</script>
+
+</body>
+</html>

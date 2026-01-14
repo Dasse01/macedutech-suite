@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLST 학습 성격 유형 진단 - 맥에듀테크</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f1f5f9; --card:#ffffff; --primary:#1e40af; --secondary:#3b82f6;
+      --text:#1e293b; --border:#e2e8f0; --muted:#64748b;
+      --good:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+    }
+    body{
+      font-family:'Pretendard',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding:20px;
+      line-height:1.6;
+    }
+    .container{max-width:980px;margin:0 auto;}
+    .card{
+      background:var(--card);
+      border-radius:20px;
+      padding:30px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.05);
+      margin-bottom:25px;
+    }
+    h1{text-align:center;color:var(--primary);font-weight:800;margin:0 0 10px;}
+    .instruction{
+      background:#eff6ff;
+      padding:15px;
+      border-radius:12px;
+      font-size:0.92rem;
+      margin-bottom:25px;
+      border-left:5px solid var(--secondary);
+    }
+
+    /* 문항 */
+    .q-row{
+      border-bottom:1px solid var(--border);
+      padding:18px 0;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+    }
+    .q-text{font-weight:600;flex:1;padding-right:10px;}
+    .options{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+    .opt-label{font-size:0.8rem;text-align:center;cursor:pointer;min-width:34px;}
+    input[type="radio"]{display:block;margin:5px auto;}
+
+    .btn-group{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;}
+    button{
+      flex:1;
+      min-width:220px;
+      padding:16px 14px;
+      border-radius:12px;
+      border:none;
+      font-weight:800;
+      cursor:pointer;
+      transition:0.25s;
+      font-size:1rem;
+    }
+    .btn-main{background:var(--primary);color:#fff;}
+    .btn-sub{background:#0f172a;color:#fff;}
+    .btn-save{background:#64748b;color:#fff;}
+    .btn-ghost{background:transparent;color:#64748b;border:1px solid #cbd5e1;}
+
+    /* 결과 */
+    #resultArea{display:none;}
+
+    /* 그래프 */
+    .chart-container{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin:8px 0 10px;
+    }
+    .chart-box{
+      width:360px;
+      height:390px;
+    }
+
+    .analysis-box{
+      background:#f8fafc;
+      padding:20px;
+      border-radius:16px;
+      border:1px solid var(--border);
+    }
+    .type-badge{
+      display:inline-block;
+      padding:4px 12px;
+      border-radius:999px;
+      background:var(--primary);
+      color:#fff;
+      font-size:0.85rem;
+      margin-bottom:10px;
+      font-weight:800;
+    }
+
+    .summary-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+    @media (max-width:768px){ .summary-row{ grid-template-columns:1fr; } }
+
+    .pill{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    .pill small{color:var(--muted);display:block;margin-top:2px;}
+    .score{font-weight:900;}
+    .tag{
+      font-size:0.75rem;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:#f8fafc;
+      display:inline-block;
+      margin-top:6px;
+      text-align:center;
+      min-width:64px;
+      font-weight:800;
+    }
+    .tag.good{color:var(--good);border-color:rgba(22,163,74,.25);background:rgba(22,163,74,.08);}
+    .tag.warn{color:var(--warn);border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.08);}
+    .tag.bad{color:var(--bad);border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.08);}
+
+    .section-title{margin:18px 0 8px;font-weight:900;color:#0f172a;}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width:768px){.cards{grid-template-columns:1fr;}}
+
+    .mini-card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+    }
+    .mini-card h4{margin:0 0 6px;font-size:1rem;}
+    .mini-card p{margin:0;color:#334155;font-size:.92rem;}
+    .mini-card ul{margin:8px 0 0;padding-left:18px;color:#334155;font-size:.9rem;}
+    .hr{margin:16px 0;border:0;border-top:1px solid var(--border);}
+
+    .footer-note{
+      text-align:center;
+      font-size:0.8rem;
+      color:#94a3b8;
+      margin-top:22px;
+    }
+
+    .policy-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:10px;
+    }
+    @media (max-width:768px){ .policy-grid{ grid-template-columns:1fr; } }
+
+    .kpi{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    .kpi b{font-weight:900;}
+    .kpi small{color:var(--muted);display:block;margin-top:2px;}
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- 테스트 영역 -->
+  <div class="card" id="testCard">
+    <h1>🧠 MLST 학습 성격 유형 진단</h1>
+    <div class="instruction">
+      각 문항을 읽고 자신에게 가장 가까운 정도를 체크해 주세요.<br>
+      (1: 전혀 아니다 / 2: 아니다 / 3: 보통이다 / 4: 그렇다 / 5: 매우 그렇다)<br><br>
+      ※ 주의: ‘불안하다/흐트러진다’처럼 <b>문항이 부정형</b>인 경우, 결과 점수는 <b>역채점(5→1)</b>으로 반영됩니다.
+    </div>
+
+    <form id="mlstForm">
+      <div id="questions"></div>
+      <div class="btn-group">
+        <button type="button" class="btn-main" onclick="processMLST()">진단 결과 생성</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 결과 영역 -->
+  <div id="resultArea">
+    <div class="card" id="captureArea">
+      <h2 style="text-align:center;color:var(--primary);margin:0 0 12px;">🔍 학습 성격 유형 분석 리포트</h2>
+
+      <div class="chart-container">
+        <div class="chart-box">
+          <canvas id="mlstChart"></canvas>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:0.9rem;color:var(--muted);margin:0 0 18px;">
+        ※ 100점 환산 기준 학습 밸런스
+      </p>
+
+      <div class="analysis-box">
+        <div id="typeResult"></div>
+
+        <div class="summary-row" id="scoreSummary"></div>
+
+        <div class="hr"></div>
+
+        <div id="strengthWeakness"></div>
+
+        <div class="section-title">스케줄러 반영 추천(자동 설정값)</div>
+        <div id="schedulerPolicy"></div>
+
+        <!-- ✅ NEW: 과목별 GPT 프롬프트 생성기 -->
+        <div class="section-title">과목별 GPT 학습 코치 프롬프트</div>
+        <div class="mini-card">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <b>과목 선택</b>
+            <select id="subjectSelect" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;">
+              <option value="국어">국어</option>
+              <option value="수학">수학</option>
+              <option value="영어">영어</option>
+              <option value="탐구">탐구</option>
+            </select>
+
+            <button class="btn-main" style="flex:0;min-width:160px;" type="button" onclick="generatePrompt()">프롬프트 생성</button>
+            <button class="btn-sub" style="flex:0;min-width:120px;" type="button" onclick="copyPrompt()">복사</button>
+          </div>
+
+          <textarea id="promptBox" rows="10"
+            style="width:100%;margin-top:12px;border-radius:10px;padding:12px;border:1px solid #cbd5e1;font-size:.9rem;"></textarea>
+
+          <div style="margin-top:8px;color:var(--muted);font-size:.86rem;">
+            * 버튼 클릭 후 생성된 문장을 그대로 ChatGPT에 붙여넣으면 됩니다.
+          </div>
+        </div>
+
+        <div class="section-title">영역별 상세 분석</div>
+        <div class="cards" id="detailCards"></div>
+
+        <div class="section-title">실행 플랜</div>
+        <div id="actionPlan"></div>
+      </div>
+
+      <p class="footer-note">
+        본 진단은 고1 학습 컨설팅 '학습 진단 및 목표 설정' 단계의 참고 자료입니다.
+      </p>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-save" onclick="downloadResult()">결과지 이미지로 저장</button>
+
+      <button class="btn-sub" type="button" onclick="applyToScheduler()">
+        스케줄러에 반영하기
+      </button>
+
+      <button class="btn-ghost" type="button" onclick="location.reload()">다시 테스트하기</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /***********************
+   * 1) 문항 (✅ reverse 플래그 추가)
+   *    - 불안/집중 문항은 "동의할수록 나쁜 상태"라 역채점 필요
+   ***********************/
+  const questions = [
+    { q: "나는 어려운 문제를 끝까지 풀어냈을 때 큰 기쁨을 느낀다.", cat: "motivation", reverse:false },
+    { q: "나는 구체적인 학습 목표를 세우고 공부를 시작한다.", cat: "motivation", reverse:false },
+    { q: "시험 기간이 다가오면 지나치게 긴장되고 불안하다.", cat: "anxiety", reverse:true },           // ✅ 역채점(심리안정)
+    { q: "공부할 때 작은 소음에도 쉽게 집중력이 흐트러진다.", cat: "concentration", reverse:true },      // ✅ 역채점(버그 수정)
+    { q: "공부한 내용을 나만의 방식으로 정리하여 요약한다.", cat: "skill", reverse:false },
+    { q: "모르는 내용이 나오면 이해될 때까지 질문하거나 찾아본다.", cat: "will", reverse:false },
+    { q: "나는 내가 무엇을 알고 무엇을 모르는지 정확히 알고 있다.", cat: "metacognition", reverse:false }
+  ];
+
+  // 문항 렌더링
+  const qContainer = document.getElementById('questions');
+  questions.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'q-row';
+    div.innerHTML = `
+      <div class="q-text">${idx + 1}. ${item.q}</div>
+      <div class="options">
+        ${[1,2,3,4,5].map(v => `
+          <label class="opt-label">${v}
+            <input type="radio" name="q${idx}" value="${v}" required>
+          </label>
+        `).join('')}
+      </div>
+    `;
+    qContainer.appendChild(div);
+  });
+
+  /***********************
+   * 2) 점수 계산 & 결과 렌더
+   ***********************/
+  let mlstChart = null;
+  let g_lastScores = null;
+
+  function processMLST(){
+    const form = document.getElementById('mlstForm');
+    const formData = new FormData(form);
+
+    let scores = { motivation:0, anxiety:0, concentration:0, skill:0, will:0, metacognition:0 };
+    let allAnswered = true;
+
+    questions.forEach((item, idx) => {
+      const val = formData.get(`q${idx}`);
+      if(!val) allAnswered = false;
+      else{
+        const raw = parseInt(val, 10);
+        const finalVal = item.reverse ? (6 - raw) : raw;    // ✅ reverse 반영
+        scores[item.cat] += (finalVal * 20);                // 100점 환산
+      }
+    });
+
+    if(!allAnswered){ alert("모든 문항에 답변해 주세요."); return; }
+
+    g_lastScores = scores;
+    persistMLST(scores);
+
+    document.getElementById('testCard').style.display = 'none';
+    document.getElementById('resultArea').style.display = 'block';
+
+    renderChart(Object.values(scores));
+    renderAnalysis(scores);
+    renderSchedulerPolicy(scores);
+
+    // ✅ NEW: 결과 뜨자마자 기본 프롬프트 1회 자동 생성(선택)
+    generatePrompt();
+  }
+
+  function persistMLST(scores){
+    localStorage.setItem("mlst_profile_v1", JSON.stringify({
+      version: 1,
+      createdAt: Date.now(),
+      scores
+    }));
+  }
+
+  function applyToScheduler(){
+    const raw = localStorage.getItem("mlst_profile_v1");
+    if(!raw){
+      alert("먼저 진단을 완료해 주세요.");
+      return;
+    }
+    location.href = "scheduler.html?from=mlst";
+  }
+
+  /***********************
+   * 3) 차트
+   ***********************/
+  function renderChart(data){
+    const ctx = document.getElementById('mlstChart').getContext('2d');
+    if(mlstChart) mlstChart.destroy();
+
+    mlstChart = new Chart(ctx, {
+      type:'radar',
+      data:{
+        labels:['학습동기','심리안정','집중력','공부기술','학습의지','메타인지'],
+        datasets:[{
+          data,
+          backgroundColor:'rgba(30, 64, 175, 0.2)',
+          borderColor:'rgba(30, 64, 175, 1)',
+          borderWidth:2,
+          pointBackgroundColor:'rgba(30, 64, 175, 1)'
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        layout:{ padding:{ top:30, right:20, bottom:20, left:20 } },
+        scales:{
+          r:{
+            beginAtZero:true,
+            max:100,
+            ticks:{ display:false },
+            pointLabels:{ padding:12, font:{ size:13 } }
+          }
+        },
+        plugins:{ legend:{ display:false } }
+      }
+    });
+  }
+
+  /***********************
+   * 4) 상세 결과 로직
+   ***********************/
+  const LABELS = {
+    motivation: "학습동기",
+    anxiety: "심리안정",
+    concentration: "집중력",
+    skill: "공부기술",
+    will: "학습의지",
+    metacognition: "메타인지"
+  };
+
+  function levelTag(score){
+    if(score >= 85) return { text:"매우 높음", cls:"good" };
+    if(score >= 70) return { text:"높음", cls:"good" };
+    if(score >= 55) return { text:"보통", cls:"warn" };
+    if(score >= 40) return { text:"낮음", cls:"bad" };
+    return { text:"매우 낮음", cls:"bad" };
+  }
+
+  function oneLineDiagnosis(key, score){
+    const L = levelTag(score).text;
+    const map = {
+      motivation: {
+        hi: "목표가 생기면 스스로 추진력이 붙는 타입",
+        mid: "자극이 있으면 올라가지만 유지가 관건",
+        low: "공부가 ‘해야 할 일’로만 느껴질 가능성"
+      },
+      anxiety: {
+        hi: "시험 상황에서도 비교적 안정적으로 버팀",
+        mid: "불안이 성적에 영향을 줄 때가 있음",
+        low: "불안/압박이 학습 효율을 크게 떨어뜨릴 수 있음"
+      },
+      concentration: {
+        hi: "환경 변화에도 집중을 유지하는 편",
+        mid: "컨디션/환경에 따라 흔들릴 수 있음",
+        low: "산만함이 누적되어 시간 대비 성과가 낮아질 수 있음"
+      },
+      skill: {
+        hi: "정리·복습·문제풀이 루틴이 잘 잡힘",
+        mid: "방법은 있으나 일관성/정교화가 필요",
+        low: "노력 대비 점수로 연결이 덜 되는 구간"
+      },
+      will: {
+        hi: "막판 버티기와 루틴 유지가 강점",
+        mid: "계획은 세우지만 끊기는 구간이 생길 수 있음",
+        low: "작은 실패가 ‘포기’로 이어지기 쉬움"
+      },
+      metacognition: {
+        hi: "자기 약점을 정확히 찍고 보완하는 편",
+        mid: "대략은 알지만 오답 원인 분해가 더 필요",
+        low: "‘안다/모른다’ 구분이 흐려 비효율이 생길 수 있음"
+      }
+    };
+    if(score >= 70) return `${L} · ${map[key].hi}`;
+    if(score >= 55) return `${L} · ${map[key].mid}`;
+    return `${L} · ${map[key].low}`;
+  }
+
+  function prescriptions(key, score){
+    const P = {
+      motivation: {
+        symptom: "시작은 하는데 금방 흐지부지 / 목표가 ‘추상적’",
+        cause: "목표가 점수·등급만 남고 ‘행동’으로 번역이 안 됨",
+        do: [
+          "이번 주 목표를 ‘행동’으로 3개만: (예) 수학 4점 20문항, 영어 빈칸 15지문",
+          "하루 시작 5분: 오늘 할 일 2줄 + 끝나면 체크",
+          "보상은 ‘시간’이 아니라 ‘완료’에 걸기"
+        ]
+      },
+      anxiety: {
+        symptom: "시험/발표/채점 때 심장이 빨라지고 머리가 하얘짐",
+        cause: "통제 불가능 요소(결과)에 초점 → 과각성",
+        do: [
+          "공부 시작 전 60초 호흡(4초 들숨-4초 멈춤-6초 날숨)",
+          "목표를 ‘점수’ 대신 ‘과정’으로 쪼개기(오늘은 오답 10개만)",
+          "시험 전날: 새 문제 금지, 오답·요약만"
+        ]
+      },
+      concentration: {
+        symptom: "폰/잡생각/소음에 자주 끊김",
+        cause: "집중 스위치가 ‘환경’에 의존",
+        do: [
+          "25-5(또는 40-10) 타이머로 ‘끊김’ 자체를 설계",
+          "폰은 다른 방/가방 깊숙이(시야에서 제거가 핵심)",
+          "집중이 깨지면 ‘할 일 1줄’만 다시 적고 재시작"
+        ]
+      },
+      skill: {
+        symptom: "많이 했는데 성적이 덜 오름 / 복습이 쌓임",
+        cause: "인풋(읽기) 중심 → 아웃풋(인출) 부족",
+        do: [
+          "공부의 50%는 ‘문제/퀴즈/백지복습’로",
+          "오답은 1) 왜 틀림 2) 다음엔 어떻게 3) 유사문항 1개",
+          "요약은 ‘한 장’이 아니라 ‘세 줄’로 압축"
+        ]
+      },
+      will: {
+        symptom: "작은 실패 뒤 루틴이 무너짐",
+        cause: "계획이 ‘완벽’ 기준이라 흔들리면 전부 포기",
+        do: [
+          "최소기준(바닥루틴) 설정: 매일 30분은 무조건",
+          "주 1회 ‘리셋 데이’: 밀린 것 정리 + 계획 재설정",
+          "힘든 날엔 ‘난이도’ 대신 ‘분량’만 줄이기"
+        ]
+      },
+      metacognition: {
+        symptom: "뭘부터 해야 할지 모르겠고, 약점이 계속 반복",
+        cause: "오답 원인 분류가 없음(개념/계산/독해/시간 등)",
+        do: [
+          "오답 태그 4개만: 개념·계산·실수·시간(또는 독해)",
+          "태그별로 ‘처방’ 고정: 계산=유형 10개, 시간=제한시간 훈련",
+          "매주 1회: 태그 비율 보고 다음 주 계획 조정"
+        ]
+      }
+    };
+
+    const base = P[key];
+    if(score >= 80){
+      return {
+        symptom: "이 영역은 이미 상위권 루틴이 잡혀 있음",
+        cause: "유지하면서 ‘고난도/실전’으로 확장하면 됨",
+        do: [
+          "실전 조건(시간/환경)에서 1회 더 반복",
+          "내 약점 태그 1개를 정해 ‘주 2회’만 집중 강화",
+          "다른 영역(낮은 점수)을 끌어올리는 ‘버팀목’으로 활용"
+        ]
+      };
+    }
+    return base;
+  }
+
+  function typeAndAdvice(scores){
+    const entries = Object.entries(scores).map(([k,v]) => ({k, v}));
+    entries.sort((a,b) => b.v - a.v);
+    const top = entries.slice(0,2);
+    const low = entries.slice(-2);
+
+    const highAvg = (top[0].v + top[1].v)/2;
+    const lowAvg = (low[0].v + low[1].v)/2;
+
+    let type = "성장 잠재력형";
+    let advice = "기본 루틴만 잡아도 성적 상승이 가능한 구간입니다. 낮은 2개 영역을 먼저 끌어올리세요.";
+
+    if(highAvg >= 85 && lowAvg >= 70){
+      type = "밸런스 상위권형";
+      advice = "학습 밸런스가 안정적입니다. 실전 타임어택·고난도 비중을 늘리면 성적이 한 단계 올라갑니다.";
+    } else if(scores.metacognition >= 80 && scores.will >= 80){
+      type = "자기주도 완성형";
+      advice = "자기점검과 루틴 유지가 강점입니다. 약점 태그 1개만 정밀 타격하면 상위권이 굳어집니다.";
+    } else if(scores.motivation >= 80 && scores.skill < 60){
+      type = "열정 과다 노오력형";
+      advice = "의욕은 충분한데 점수로 연결되는 기술이 부족합니다. ‘인출학습+오답 분해’로 효율을 바꾸세요.";
+    } else if(scores.anxiety <= 40){
+      type = "심리 불안 위험형";
+      advice = "불안이 학습을 끊고 있습니다. 계획을 쪼개고(과정 목표), 호흡·루틴으로 안정도를 먼저 올려야 합니다.";
+    } else if(scores.concentration <= 40){
+      type = "집중 분산 위험형";
+      advice = "집중이 새는 구간이 큽니다. 타이머/환경 제거로 ‘끊김을 줄이는 설계’가 최우선입니다.";
+    }
+
+    return { type, advice, top, low };
+  }
+
+  function renderAnalysis(scores){
+    const typeBox = document.getElementById('typeResult');
+    const scoreSummary = document.getElementById('scoreSummary');
+    const swBox = document.getElementById('strengthWeakness');
+    const cardsBox = document.getElementById('detailCards');
+    const planBox = document.getElementById('actionPlan');
+
+    const { type, advice, top, low } = typeAndAdvice(scores);
+
+    typeBox.innerHTML = `
+      <span class="type-badge">유형 진단</span>
+      <h3 style="margin:0;">${type}</h3>
+      <p style="margin:8px 0 0;color:#334155;"><b>💡 컨설턴트 총평:</b> ${advice}</p>
+      <p style="margin:8px 0 0;font-size:.85rem;color:var(--muted);">
+        * ‘심리안정’은 불안 문항을 역채점(불안 높을수록 점수 낮음)으로 환산합니다.
+      </p>
+    `;
+
+    const order = ["motivation","anxiety","concentration","skill","will","metacognition"];
+    scoreSummary.innerHTML = order.map(k => {
+      const s = scores[k];
+      const tag = levelTag(s);
+      return `
+        <div class="pill">
+          <div>
+            <div style="font-weight:900;">${LABELS[k]}</div>
+            <small>${oneLineDiagnosis(k, s)}</small>
+          </div>
+          <div style="text-align:right;">
+            <div class="score">${s}</div>
+            <div class="tag ${tag.cls}">${tag.text}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const topText = top.map(x => `${LABELS[x.k]}(${x.v})`).join(", ");
+    const lowText = low.map(x => `${LABELS[x.k]}(${x.v})`).join(", ");
+    swBox.innerHTML = `
+      <div class="section-title">핵심 요약</div>
+      <div class="mini-card">
+        <p style="margin:0;"><b>✅ 강점 TOP2</b>: ${topText}</p>
+        <p style="margin:6px 0 0;"><b>⚠️ 보완 TOP2</b>: ${lowText}</p>
+      </div>
+    `;
+
+    cardsBox.innerHTML = order.map(k => {
+      const s = scores[k];
+      const tag = levelTag(s);
+      const pr = prescriptions(k, s);
+      return `
+        <div class="mini-card">
+          <h4>
+            ${LABELS[k]} <span class="tag ${tag.cls}">${tag.text}</span>
+            <span style="float:right;font-weight:900;">${s}점</span>
+          </h4>
+          <p><b>한줄 진단:</b> ${oneLineDiagnosis(k, s)}</p>
+          <ul>
+            <li><b>징후</b>: ${pr.symptom}</li>
+            <li><b>원인</b>: ${pr.cause}</li>
+            <li><b>처방(바로 실행)</b>:
+              <div style="margin-top:6px;">
+                ${pr.do.map(x => `<div>• ${x}</div>`).join("")}
+              </div>
+            </li>
+          </ul>
+        </div>
+      `;
+    }).join("");
+
+    const lowKeys = low.map(x => x.k);
+    planBox.innerHTML = `
+      <div class="mini-card">
+        <p style="margin:0;"><b>오늘(바로 적용)</b></p>
+        <ul>
+          <li>${LABELS[lowKeys[0]]}: 처방 1개만 선택해서 20분 실행</li>
+          <li>${LABELS[lowKeys[1]]}: 환경/루틴 1개만 ‘고정’</li>
+        </ul>
+        <p style="margin:10px 0 0;"><b>이번 주</b></p>
+        <ul>
+          <li>낮은 영역 2개를 주 4회씩(짧아도 OK) 반복</li>
+          <li>오답/기록을 남겨 다음 주 계획을 ‘데이터로’ 수정</li>
+        </ul>
+        <p style="margin:10px 0 0;"><b>시험 2주 전</b></p>
+        <ul>
+          <li>실전 모드(시간 제한)로 주 2회 전환</li>
+          <li>불안/집중이 흔들리면 ‘과정 목표’로 다시 쪼개서 유지</li>
+        </ul>
+      </div>
+    `;
+  }
+  /***********************
+   * 5) 스케줄러 반영 정책
+   ***********************/
+  function pickWeakTop2(scores){
+    const arr = Object.entries(scores).map(([k,v])=>({k,v}));
+    arr.sort((a,b)=>a.v-b.v);
+    return arr.slice(0,2);
+  }
+
+  function mlstToSchedulePolicy(scores){
+    const blockMin = (scores.concentration <= 40) ? 25 : (scores.concentration <= 60 ? 35 : 45);
+
+    let ratio = {
+      newLearning: 0.35,
+      practice:    0.35,
+      review:      0.20,
+      meta:        0.10
+    };
+
+    if(scores.skill <= 60){
+      ratio.review += 0.10;
+      ratio.newLearning -= 0.05;
+      ratio.practice -= 0.05;
+    }
+
+    if(scores.metacognition <= 60){
+      ratio.meta += 0.05;
+      ratio.practice -= 0.05;
+    }
+
+    const needEasyStart = (scores.anxiety <= 40);
+    const minDailyMinutes = (scores.will <= 60) ? 60 : 0;
+    const deepWorkPerWeek = (scores.motivation >= 80) ? 3 : 1;
+
+    const weakTop2 = pickWeakTop2(scores);
+    return { blockMin, ratio, needEasyStart, minDailyMinutes, deepWorkPerWeek, weakTop2 };
+  }
+
+  function renderSchedulerPolicy(scores){
+    const el = document.getElementById("schedulerPolicy");
+    const policy = mlstToSchedulePolicy(scores);
+
+    const pct = (x)=>Math.round(x*100);
+    const weakText = policy.weakTop2.map(x=>`${LABELS[x.k]}(${x.v})`).join(", ");
+
+    localStorage.setItem("mlst_schedule_policy_v1", JSON.stringify({
+      version: 1,
+      createdAt: Date.now(),
+      policy
+    }));
+
+    el.innerHTML = `
+      <div class="mini-card">
+        <p style="margin:0;color:#0f172a;">
+          <b>이 결과를 스케줄러가 자동 반영할 수 있도록</b> 아래 설정값을 생성했습니다.
+        </p>
+
+        <div class="policy-grid">
+          <div class="kpi">
+            <div>
+              <b>권장 블록 길이</b>
+              <small>집중력 점수 기반</small>
+            </div>
+            <div style="font-weight:900;">${policy.blockMin}분</div>
+          </div>
+
+          <div class="kpi">
+            <div>
+              <b>보완 우선순위</b>
+              <small>낮은 2개 영역</small>
+            </div>
+            <div style="font-weight:900;">${weakText}</div>
+          </div>
+
+          <div class="kpi">
+            <div>
+              <b>학습 비율(자동)</b>
+              <small>진도/문풀/복습/점검</small>
+            </div>
+            <div style="font-weight:900;">
+              ${pct(policy.ratio.newLearning)}/${pct(policy.ratio.practice)}/${pct(policy.ratio.review)}/${pct(policy.ratio.meta)}%
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div>
+              <b>특수 옵션</b>
+              <small>불안·의지·동기 반영</small>
+            </div>
+            <div style="font-weight:900;">
+              ${policy.needEasyStart ? "쉬운 시작 ON" : "쉬운 시작 OFF"} ·
+              ${policy.minDailyMinutes ? `바닥루틴 ${policy.minDailyMinutes}분` : "바닥루틴 없음"} ·
+              심화 ${policy.deepWorkPerWeek}/주
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;color:var(--muted);font-size:.9rem;">
+          * 스케줄러 페이지에서 <code>localStorage.getItem("mlst_profile_v1")</code> 또는
+          <code>localStorage.getItem("mlst_schedule_policy_v1")</code>로 불러오면 됩니다.
+        </div>
+      </div>
+    `;
+  }
+
+  /***********************
+   * 6) ✅ NEW: 과목별 GPT 프롬프트 생성기
+   ***********************/
+  function generatePrompt(){
+    const subject = document.getElementById("subjectSelect").value;
+    const scores = g_lastScores;
+    if(!scores){
+      alert("진단을 먼저 완료해 주세요.");
+      return;
+    }
+
+    const weak2 = pickWeakTop2(scores).map(x => `${LABELS[x.k]}(${x.v})`).join(", ");
+    const strong1 = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0];
+    const strongText = `${LABELS[strong1[0]]}(${strong1[1]})`;
+
+    const prompt = `
+[${subject} 전용 학습 코치 프롬프트]
+
+너는 ${subject} 성적을 올리는 전문 학습 코치다.
+아래 MLST 진단 데이터를 기반으로, 오늘 학습을 "개념→유형→오답원인→재인출" 루틴으로 설계해라.
+
+- 학습동기: ${scores.motivation}
+- 심리안정: ${scores.anxiety}
+- 집중력: ${scores.concentration}
+- 공부기술: ${scores.skill}
+- 학습의지: ${scores.will}
+- 메타인지: ${scores.metacognition}
+
+- 강점(Top): ${strongText}
+- 보완(Top2): ${weak2}
+
+출력 규칙(매우 중요):
+1) 오늘 해야 할 "학습 세트"를 3개로 쪼개라(각 20~40분).
+2) 각 세트 시작은 반드시 "핵심 아이디어 1줄"을 쓰게 하라.
+3) 오답은 원인 1개만 지정하고(개념/계산/조건누락/시간/독해 등), 그 원인을 막는 체크리스트 1개를 제시하라.
+4) 보완 Top2(${weak2})를 중심으로 시간 배분을 조정하라.
+5) 마지막에 재인출 복습 타이밍을 1일·2일·6일·31일 기준으로 제시하라.
+`.trim();
+
+    document.getElementById("promptBox").value = prompt;
+  }
+
+  function copyPrompt(){
+    const box = document.getElementById("promptBox");
+    if(!box.value){
+      alert("먼저 프롬프트를 생성해 주세요.");
+      return;
+    }
+    box.select();
+    box.setSelectionRange(0, 999999);
+    document.execCommand("copy");
+    alert("프롬프트가 복사되었습니다.");
+  }
+
+  /***********************
+   * 7) 이미지 저장
+   ***********************/
+  function downloadResult(){
+    html2canvas(document.getElementById('captureArea')).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'MLST_진단결과.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  }
+</script>
+</body>
+</html>

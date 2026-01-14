@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MacEduTech | 학습 진단 & 스케줄러 (Hub)</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body{ font-family:"Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .glass{ background: rgba(255,255,255,.72); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.35); }
+    .shadow-soft{ box-shadow: 0 18px 60px rgba(2,6,23,.10); }
+    .ring-soft{ box-shadow: 0 0 0 1px rgba(99,102,241,.18) inset; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
+      border-radius: 999px; padding: 12px 16px; font-weight: 900; font-size: 13px;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size: 11px; padding: 3px 8px; border-radius: 999px;
+      background:#0f172a; color:#fff;
+    }
+    /* iframe 로딩 중 표시 */
+    .loader{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(2,6,23,.35);
+      backdrop-filter: blur(6px);
+      border-radius: 24px;
+      opacity:0; pointer-events:none;
+      transition: opacity .15s ease;
+    }
+    .loader.on{ opacity:1; pointer-events:auto; }
+    .spinner{
+      width:34px; height:34px; border-radius:999px;
+      border:4px solid rgba(255,255,255,.28);
+      border-top-color: rgba(255,255,255,.92);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg);} }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950"></div>
+    <div class="absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full blur-3xl opacity-40"
+         style="background: radial-gradient(circle at 30% 30%, rgba(99,102,241,.65), transparent 60%);"></div>
+    <div class="absolute -bottom-40 -right-40 w-[560px] h-[560px] rounded-full blur-3xl opacity-35"
+         style="background: radial-gradient(circle at 70% 70%, rgba(16,185,129,.55), transparent 60%);"></div>
+  </div>
+
+  <main class="max-w-7xl mx-auto px-5 py-10 md:py-12">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-white/10 ring-soft flex items-center justify-center shadow-soft">
+          <span class="text-lg">🧠</span>
+        </div>
+        <div>
+          <p class="text-[11px] tracking-[0.22em] uppercase text-white/60 font-black">MacEduTech Suite</p>
+          <h1 class="text-2xl md:text-3xl font-black tracking-tight">학습 진단 · 루틴 · 스케줄러 (허브)</h1>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <span class="px-3 py-1 rounded-full bg-white/10 text-[11px] font-black text-white/80">GitHub Pages</span>
+        <span class="px-3 py-1 rounded-full bg-white/10 text-[11px] font-black text-white/80">Hub + Iframe</span>
+        <span class="px-3 py-1 rounded-full bg-white/10 text-[11px] font-black text-white/80">No Page Disappear</span>
+      </div>
+    </header>
+
+    <!-- Layout: Left Hub / Right Viewer -->
+    <section class="mt-7 grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- LEFT: 고정 허브 -->
+      <div class="lg:col-span-4 p-7 rounded-[2.2rem] glass shadow-soft text-slate-900">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Navigation</div>
+            <h2 class="text-xl font-black mt-1">원하는 기능을 여세요</h2>
+          </div>
+          <button class="btn bg-slate-900 text-white shadow-soft hover:bg-black"
+                  type="button" onclick="openInNewTab()">
+            🔗 새 탭
+          </button>
+        </div>
+
+        <p class="mt-3 text-[13px] leading-relaxed text-slate-700 font-semibold">
+          버튼을 누르면 <b>페이지 이동이 아니라</b> 오른쪽 화면에 불러옵니다.<br/>
+          그래서 이 첫 화면(허브)은 <b>절대 사라지지 않습니다.</b>
+        </p>
+
+        <div class="mt-5 flex flex-col gap-3">
+          <button class="btn bg-indigo-600 text-white shadow-soft hover:bg-indigo-700 justify-between"
+                  type="button" onclick="loadPage('mlst.html','MLST 진단')">
+            <span>🧪 MLST 진단</span> <span class="kbd">mlst.html</span>
+          </button>
+
+          <button class="btn bg-slate-900 text-white shadow-soft hover:bg-black justify-between"
+                  type="button" onclick="loadPage('scheduler.html','스케줄러')">
+            <span>📅 스케줄러</span> <span class="kbd">scheduler.html</span>
+          </button>
+
+          <button class="btn bg-emerald-500 text-slate-950 shadow-soft hover:bg-emerald-400 justify-between"
+                  type="button" onclick="loadPage('re-mind.html','RE-MIND 리포트')">
+            <span>📈 RE-MIND 리포트</span> <span class="kbd">re-mind.html</span>
+          </button>
+
+          <button class="btn bg-white/80 text-slate-900 shadow-soft hover:bg-white justify-between"
+                  type="button" onclick="loadPage('index.html','허브(홈)')">
+            <span>🏠 허브 홈 보기</span> <span class="kbd">index.html</span>
+          </button>
+        </div>
+
+        <!-- 상태 박스 -->
+        <div class="mt-6 p-4 rounded-2xl bg-white/70 border border-white/50">
+          <div class="text-[11px] font-black text-slate-500 tracking-widest uppercase">LocalStorage</div>
+          <div class="mt-2 text-[13px] font-bold">
+            MLST 프로필: <span id="stProfile" class="font-black text-emerald-700">확인중…</span>
+          </div>
+          <div class="mt-2 text-[13px] font-bold">
+            스케줄 정책: <span id="stPolicy" class="font-black text-indigo-700">확인중…</span>
+          </div>
+
+          <div class="mt-3 flex gap-2">
+            <button class="btn bg-white text-slate-900 ring-soft hover:bg-slate-50"
+                    type="button" onclick="refreshStatus()">↻ 새로고침</button>
+            <button class="btn bg-rose-600 text-white hover:bg-rose-700 shadow-soft"
+                    type="button" onclick="clearLocal()">🧹 초기화</button>
+          </div>
+        </div>
+
+        <div class="mt-5 text-[12px] text-slate-600 font-semibold">
+          ✅ 404가 뜨면: 저장소 root에 파일명이 정확히 있는지(대/소문자 포함) 확인하세요.
+        </div>
+      </div>
+
+      <!-- RIGHT: 뷰어(iframe) -->
+      <div class="lg:col-span-8">
+        <div class="relative rounded-[2.2rem] bg-white/10 border border-white/10 shadow-soft overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
+            <div class="flex items-center gap-2">
+              <span class="px-3 py-1 rounded-full bg-white/10 text-[11px] font-black text-white/80">Viewer</span>
+              <div class="text-[13px] font-black" id="viewerTitle">홈(허브 안내)</div>
+            </div>
+            <div class="text-[12px] text-white/70 font-semibold" id="viewerPath">index.html</div>
+          </div>
+
+          <div class="p-4 md:p-5">
+            <!-- 홈 안내(기본 화면) -->
+            <div id="homePanel" class="rounded-3xl bg-white/10 border border-white/10 p-6">
+              <h3 class="text-xl md:text-2xl font-black">여기서부터 시작하세요</h3>
+              <p class="mt-2 text-white/80 text-[13px] font-semibold leading-relaxed">
+                왼쪽 버튼을 누르면, 오른쪽 화면이 바뀌면서도<br/>
+                허브(첫 페이지)는 그대로 유지됩니다.
+              </p>
+
+              <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="p-4 rounded-2xl bg-white/10 border border-white/10">
+                  <div class="text-[10px] font-black tracking-widest text-white/60 uppercase">Step 1</div>
+                  <div class="mt-1 font-black">MLST 진단</div>
+                  <div class="mt-1 text-[12px] text-white/70">진단 결과 저장</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/10 border border-white/10">
+                  <div class="text-[10px] font-black tracking-widest text-white/60 uppercase">Step 2</div>
+                  <div class="mt-1 font-black">프롬프트 생성</div>
+                  <div class="mt-1 text-[12px] text-white/70">과목별 루틴 복사</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/10 border border-white/10">
+                  <div class="text-[10px] font-black tracking-widest text-white/60 uppercase">Step 3</div>
+                  <div class="mt-1 font-black">스케줄러 반영</div>
+                  <div class="mt-1 text-[12px] text-white/70">블록/비율 자동</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- iframe 영역 -->
+            <div id="iframeWrap" class="hidden relative rounded-3xl overflow-hidden border border-white/10 bg-white">
+              <div id="loader" class="loader">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="spinner"></div>
+                  <div class="text-white font-black">불러오는 중…</div>
+                </div>
+              </div>
+
+              <iframe id="viewer"
+                      title="viewer"
+                      src=""
+                      class="w-full"
+                      style="height: 78vh; border:0; background:#fff;"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-3 text-center text-white/55 text-[12px] font-semibold">
+          © MacEduTech · Hub(index.html)에서 모든 페이지를 “내부 로드”합니다.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DEFAULT_PAGE = ""; // 처음엔 홈패널 보여주기
+    let currentPath = "index.html";
+
+    function hasKey(key){
+      try { return !!localStorage.getItem(key); } catch (e) { return false; }
+    }
+
+    function refreshStatus(){
+      const stProfile = document.getElementById('stProfile');
+      const stPolicy  = document.getElementById('stPolicy');
+
+      const okProfile = hasKey("mlst_profile_v1");
+      const okPolicy  = hasKey("mlst_schedule_policy_v1");
+
+      stProfile.textContent = okProfile ? "있음 ✅" : "없음 ❌";
+      stPolicy.textContent  = okPolicy  ? "있음 ✅" : "없음 ❌";
+    }
+
+    function clearLocal(){
+      if(!confirm("저장된 MLST 진단 데이터/정책을 모두 삭제할까요?")) return;
+      try{
+        localStorage.removeItem("mlst_profile_v1");
+        localStorage.removeItem("mlst_schedule_policy_v1");
+        alert("초기화 완료!");
+        refreshStatus();
+      }catch(e){
+        alert("초기화 실패: 브라우저 저장소 접근을 확인하세요.");
+      }
+    }
+
+    function setViewerHeader(title, path){
+      document.getElementById("viewerTitle").textContent = title;
+      document.getElementById("viewerPath").textContent = path;
+    }
+    function showHome(){
+      currentPath = "index.html";
+      setViewerHeader("홈(허브 안내)", "index.html");
+
+      document.getElementById("homePanel").classList.remove("hidden");
+      document.getElementById("iframeWrap").classList.add("hidden");
+
+      // 해시도 정리
+      history.replaceState(null, "", location.pathname);
+    }
+
+    function loadPage(path, title){
+      // 허브 홈 버튼을 눌렀을 때
+      if(path === "index.html"){
+        showHome();
+        return;
+      }
+
+      currentPath = path;
+      setViewerHeader(title, path);
+
+      const homePanel = document.getElementById("homePanel");
+      const iframeWrap = document.getElementById("iframeWrap");
+      const iframe = document.getElementById("viewer");
+      const loader = document.getElementById("loader");
+
+      homePanel.classList.add("hidden");
+      iframeWrap.classList.remove("hidden");
+
+      // 로딩 표시
+      loader.classList.add("on");
+
+      // 캐시 이슈 줄이기(필요시): ?v=timestamp
+      const bust = `?v=${Date.now()}`;
+      iframe.src = path + bust;
+
+      // 주소창에 해시로 현재 상태 남기기(새로고침해도 같은 페이지로)
+      location.hash = encodeURIComponent(path);
+    }
+
+    function openInNewTab(){
+      // 현재 로드된 페이지를 새 탭으로 열기
+      if(!currentPath || currentPath === "index.html"){
+        window.open("index.html", "_blank");
+        return;
+      }
+      window.open(currentPath, "_blank");
+    }
+
+    // iframe 로딩 완료 시 로더 끄기
+    document.addEventListener("DOMContentLoaded", () => {
+      refreshStatus();
+
+      const iframe = document.getElementById("viewer");
+      const loader = document.getElementById("loader");
+
+      iframe.addEventListener("load", () => {
+        // 로딩 끄기
+        loader.classList.remove("on");
+      });
+
+      // 해시가 있으면 해당 페이지를 자동 로드(새로고침/공유 대응)
+      if(location.hash){
+        const raw = decodeURIComponent(location.hash.replace("#","")).trim();
+        if(raw && raw !== "index.html"){
+          // 타이틀은 파일명 기반으로 대충 세팅(원하면 매핑 테이블 넣어드림)
+          const title = raw.includes("mlst") ? "MLST 진단"
+                      : raw.includes("scheduler") ? "스케줄러"
+                      : raw.includes("re-mind") ? "RE-MIND 리포트"
+                      : "페이지";
+          loadPage(raw, title);
+        } else {
+          showHome();
+        }
+      } else if(DEFAULT_PAGE){
+        loadPage(DEFAULT_PAGE, "페이지");
+      } else {
+        showHome();
+      }
+    });
+  </script>
+</body>
+</html>
